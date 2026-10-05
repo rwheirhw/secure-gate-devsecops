@@ -1,0 +1,13 @@
+{
+    "severity_policy" : {
+        "CRITICAL" : "BLOCK",
+        "HIGH" : "BLOCK",
+        "MEDIUM" : "WARN",
+        "LOW" : "ALLOW",
+        "UNKNOWN" : "WARN"
+    },
+    "max_allowed" : {
+        "CRITICAL" : 0,
+        "HIGH" : 0
+    }
+}
