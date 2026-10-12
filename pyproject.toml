@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "securegate"
+version = "0.2.0"
+description = "DevSecOps deployment security assurance system."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "SecureGate Team" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+]
+dependencies = [
+    "typer>=0.12",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+securegate = "securegate.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["securegate*"]
+
+[tool.pytest.ini_options]
+testpaths = ["securegate/tests"]
+python_files = ["test_*.py"]

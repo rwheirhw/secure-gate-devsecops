@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from .models import Vulnerability, ScanResult
+from .models import Finding, ScanResult
 
 
 class TrivyParser:
@@ -50,7 +50,7 @@ class TrivyParser:
             if not isinstance(vulnerabilities, list):
                 continue
 
-            parsed_vulnerabilities = []
+            parsed_findings = []
 
             for vuln in vulnerabilities:
                 if not isinstance(vuln, dict):
@@ -60,28 +60,53 @@ class TrivyParser:
                     vuln.get("Severity", "UNKNOWN")
                 ).upper()
 
-                parsed_vulnerabilities.append(
-                    Vulnerability(
-                        vulnerability_id=str(
-                            vuln.get("VulnerabilityID", "UNKNOWN")
-                        ),
-                        package=str(
-                            vuln.get("PkgName", "UNKNOWN")
-                        ),
-                        installed_version=str(
-                            vuln.get("InstalledVersion", "UNKNOWN")
-                        ),
-                        fixed_version=vuln.get("FixedVersion"),
+                vulnerability_id = str(
+                    vuln.get("VulnerabilityID", "UNKNOWN")
+                )
+                package = str(
+                    vuln.get("PkgName", "UNKNOWN")
+                )
+                installed_version = str(
+                    vuln.get("InstalledVersion", "UNKNOWN")
+                )
+                fixed_version = vuln.get("FixedVersion")
+                title = vuln.get("Title")
+
+                parsed_findings.append(
+                    Finding(
+                        id=vulnerability_id,
+                        source="trivy",
+                        category="vulnerability",
                         severity=severity,
-                        target=str(target),
-                        title=vuln.get("Title")
+                        resource=package,
+                        message=str(
+                            title
+                            or vulnerability_id
+                        ),
+                        evidence={
+                            "target": str(target),
+                            "vulnerability_id": vulnerability_id,
+                            "package": package,
+                            "installed_version": installed_version,
+                            "fixed_version": fixed_version,
+                        },
+                        metadata={
+                            "vulnerability_id": vulnerability_id,
+                            "package": package,
+                            "installed_version": installed_version,
+                            "fixed_version": fixed_version,
+                            "target": str(target),
+                            "title": title,
+                            "primary_url": vuln.get("PrimaryURL"),
+                            "status": vuln.get("Status"),
+                        }
                     )
                 )
 
             scan_results.append(
                 ScanResult(
                     target=str(target),
-                    vulnerabilities=parsed_vulnerabilities
+                    findings=parsed_findings
                 )
             )
 

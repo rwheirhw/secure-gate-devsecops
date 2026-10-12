@@ -1,0 +1,134 @@
+# ==============================================================================
+# SECUREGATED ENTERPRISE DEPLOYMENT TEMPLATE
+#
+# Baseline state: 100% HARDENED & COMPLIANT (SecureGate PASS, Risk: 0/100)
+#
+# TESTING INSTRUCTIONS:
+# Each section below contains a "SECURITY TOGGLE".
+# To simulate security violations or configuration drift, switch any toggle
+# from SECURE to WEAKENED, then run: python securegate.py inspect k8s/enterprise-sample.yaml
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: production
+  labels:
+    app.kubernetes.io/name: payment-service
+    app.kubernetes.io/part-of: fintech-core
+    app.kubernetes.io/version: "1.4.2"
+    app.kubernetes.io/component: backend
+    environment: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: payment-service
+        environment: production
+    spec:
+      # --------------------------------------------------------------------------
+      # TOGGLE 1: HOST NAMESPACE ISOLATION
+      # [SECURE]: Both false or omitted
+      # [WEAKENED]: Set hostNetwork: true, hostPID: true, or hostIPC: true
+      # --------------------------------------------------------------------------
+      hostNetwork: false
+      hostPID: false
+      hostIPC: false
+
+      # --------------------------------------------------------------------------
+      # TOGGLE 2: POD-LEVEL SECURITY CONTEXT (NON-ROOT ENFORCEMENT)
+      # [SECURE]: runAsNonRoot: true, runAsUser: 10001
+      # [WEAKENED]: Change runAsUser: 0 or remove runAsNonRoot
+      # --------------------------------------------------------------------------
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+
+      containers:
+        - name: payment-api
+          # ----------------------------------------------------------------------
+          # TOGGLE 3: IMAGE TAG & DIGEST IMMUTABILITY
+          # [SECURE]: Pinned version with SHA256 digest
+          # [WEAKENED]: Replace with: image: "myorg.azurecr.io/apps/payment-api:latest"
+          # ----------------------------------------------------------------------
+          image: myorg.azurecr.io/apps/payment-api:1.4.2@sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
+          
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # ----------------------------------------------------------------------
+          # TOGGLE 4: CONTAINER SECURITY CONTEXT & PRIVILEGE CONTROLS
+          # [SECURE]: privileged: false, allowPrivilegeEscalation: false, drop: [ALL]
+          # [WEAKENED]: Set privileged: true OR allowPrivilegeEscalation: true
+          #             OR add capabilities (e.g. add: ["NET_ADMIN"])
+          # ----------------------------------------------------------------------
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          # ----------------------------------------------------------------------
+          # TOGGLE 5: RESOURCE CONTROLS (DoS & CPU STARVATION MITIGATION)
+          # [SECURE]: requests and limits both defined for cpu & memory
+          # [WEAKENED]: Delete or comment out the entire resources block
+          # ----------------------------------------------------------------------
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+
+          # ----------------------------------------------------------------------
+          # TOGGLE 6: SECRET HYGIENE
+          # [SECURE]: Secrets referenced via valueFrom.secretKeyRef
+          # [WEAKENED]: Replace with plaintext value:
+          #             - name: DB_PASSWORD
+          #               value: "SuperSecretProductionPassword123!"
+          # ----------------------------------------------------------------------
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-secrets
+                  key: db-password
+            - name: STRIPE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: payment-gateway-secrets
+                  key: api-key
+
+---
+# ------------------------------------------------------------------------------
+# TOGGLE 7: SERVICE NETWORK EXPOSURE
+# [SECURE]: type: ClusterIP (Internal only)
+# [WEAKENED]: Change type to NodePort or LoadBalancer
+# ------------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service-internal
+  namespace: production
+  labels:
+    app.kubernetes.io/name: payment-service
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: payment-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
