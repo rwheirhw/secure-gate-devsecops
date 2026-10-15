@@ -6,7 +6,7 @@
 # TESTING INSTRUCTIONS:
 # Each section below contains a "SECURITY TOGGLE".
 # To simulate security violations or configuration drift, switch any toggle
-# from SECURE to WEAKENED, then run: python securegate.py inspect k8s/enterprise-sample.yaml
+# from SECURE to WEAKENED, then run: securegate inspect k8s/enterprise-sample.yaml
 # ==============================================================================
 
 apiVersion: apps/v1

@@ -6,12 +6,10 @@ over HTTP, reusing existing SecureGate core modules.
 
 import json
 import mimetypes
-import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import unquote, urlparse
 
 from . import __version__
 from .analyzer import Analyzer
@@ -20,11 +18,16 @@ from .inspectors.kubernetes import KubernetesInspector
 from .json_reporter import JsonReporter
 from .models import ScanResult
 from .parser import TrivyParser
+from .paths import (
+    baselines_dir,
+    load_sample_manifests,
+    reports_dir,
+    resolve_policy,
+    resolve_workspace_file,
+    web_dir,
+)
 from .policy import PolicyEngine
 from .risk import RiskEngine
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-WEB_DIR = Path(__file__).resolve().parent / "web"
 
 
 class SecureGateHandler(BaseHTTPRequestHandler):
@@ -117,7 +120,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
                 inspector = KubernetesInspector(yaml_content=manifest_yaml)
                 target_name = "inline-manifest.yaml"
             elif manifest_file:
-                target_path = ROOT_DIR / manifest_file
+                target_path = resolve_workspace_file(manifest_file)
                 inspector = KubernetesInspector(str(target_path))
                 target_name = str(manifest_file)
             else:
@@ -129,7 +132,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
             # 2. Parse Trivy report if file exists
             trivy_results = []
             if report_file:
-                rep_path = ROOT_DIR / report_file
+                rep_path = resolve_workspace_file(report_file)
                 if rep_path.is_file():
                     parser = TrivyParser(str(rep_path))
                     trivy_results = parser.parse()
@@ -141,11 +144,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
             analyzer = Analyzer(all_results)
 
             # 3. Policy evaluation
-            pol_path = ROOT_DIR / policy_file
-            if not pol_path.exists():
-                pol_path = ROOT_DIR / "config/policy.json"
-
-            policy_engine = PolicyEngine(str(pol_path))
+            policy_engine = PolicyEngine(str(resolve_policy(policy_file)))
             decision = policy_engine.evaluate(analyzer.all_findings())
 
             # 4. Transparent Risk Calculation
@@ -190,11 +189,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
 
             analyzer = Analyzer([ScanResult(target="inline.yaml", findings=k8s_findings)])
 
-            pol_path = ROOT_DIR / policy_file
-            if not pol_path.exists():
-                pol_path = ROOT_DIR / "config/policy.json"
-
-            policy_engine = PolicyEngine(str(pol_path))
+            policy_engine = PolicyEngine(str(resolve_policy(policy_file)))
             decision = policy_engine.evaluate(analyzer.all_findings())
             risk = RiskEngine().assess(analyzer.all_findings())
 
@@ -224,7 +219,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
             findings = inspector.inspect()
 
             analyzer = Analyzer([ScanResult(target="inline.yaml", findings=findings)])
-            policy_engine = PolicyEngine(str(ROOT_DIR / "config/policy.json"))
+            policy_engine = PolicyEngine(str(resolve_policy()))
             decision = policy_engine.evaluate(analyzer.all_findings())
             risk = RiskEngine().assess(analyzer.all_findings())
 
@@ -235,7 +230,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
                 )
                 return
 
-            baseline_path = ROOT_DIR / "baselines" / baseline_name
+            baseline_path = baselines_dir() / baseline_name
             store = BaselineStore()
             saved_path = store.save(
                 output_path=str(baseline_path),
@@ -266,7 +261,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
                 self._send_error(HTTPStatus.BAD_REQUEST, "manifest_yaml is required")
                 return
 
-            baseline_path = ROOT_DIR / "baselines" / baseline_file
+            baseline_path = baselines_dir() / baseline_file
             if not baseline_path.exists():
                 self._send_error(
                     HTTPStatus.NOT_FOUND, f"Baseline {baseline_file} does not exist"
@@ -284,7 +279,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
             findings = detector.findings_for(drift_events)
 
             analyzer = Analyzer([ScanResult(target="drift-check", findings=findings)])
-            policy_engine = PolicyEngine(str(ROOT_DIR / "config/policy.json"))
+            policy_engine = PolicyEngine(str(resolve_policy()))
             decision = policy_engine.evaluate(analyzer.all_findings())
             risk = RiskEngine().assess(analyzer.all_findings())
 
@@ -318,10 +313,10 @@ class SecureGateHandler(BaseHTTPRequestHandler):
 
     def _handle_list_reports(self):
         """List reports in reports/ directory."""
-        reports_dir = ROOT_DIR / "reports"
+        reports_path = reports_dir()
         files = []
-        if reports_dir.exists():
-            for p in sorted(reports_dir.glob("*.json")):
+        if reports_path.exists():
+            for p in sorted(reports_path.glob("*.json")):
                 stat = p.stat()
                 files.append(
                     {
@@ -334,8 +329,8 @@ class SecureGateHandler(BaseHTTPRequestHandler):
 
     def _handle_get_report(self, filename: str):
         """Return content of a specific report file."""
-        report_path = (ROOT_DIR / "reports" / filename).resolve()
-        if not str(report_path).startswith(str((ROOT_DIR / "reports").resolve())):
+        report_path = (reports_dir() / filename).resolve()
+        if not str(report_path).startswith(str(reports_dir().resolve())):
             self._send_error(HTTPStatus.FORBIDDEN, "Invalid path")
             return
         if not report_path.exists():
@@ -350,10 +345,10 @@ class SecureGateHandler(BaseHTTPRequestHandler):
 
     def _handle_list_baselines(self):
         """List saved baseline files."""
-        baselines_dir = ROOT_DIR / "baselines"
+        baselines_path = baselines_dir()
         files = []
-        if baselines_dir.exists():
-            for p in sorted(baselines_dir.glob("*.json")):
+        if baselines_path.exists():
+            for p in sorted(baselines_path.glob("*.json")):
                 stat = p.stat()
                 files.append(
                     {
@@ -366,8 +361,8 @@ class SecureGateHandler(BaseHTTPRequestHandler):
 
     def _handle_get_baseline(self, filename: str):
         """Return content of a specific baseline."""
-        path = (ROOT_DIR / "baselines" / filename).resolve()
-        if not str(path).startswith(str((ROOT_DIR / "baselines").resolve())):
+        path = (baselines_dir() / filename).resolve()
+        if not str(path).startswith(str(baselines_dir().resolve())):
             self._send_error(HTTPStatus.FORBIDDEN, "Invalid path")
             return
         if not path.exists():
@@ -382,16 +377,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
 
     def _handle_get_samples(self):
         """Provide sample manifests for the interactive workbench."""
-        samples = {}
-        for name, rel_path in [
-            ("enterprise_sample", "k8s/enterprise-sample.yaml"),
-            ("hardened_sample", "k8s/deployment.yaml"),
-            ("insecure_sample", "k8s/insecure-sample.yaml"),
-        ]:
-            p = ROOT_DIR / rel_path
-            if p.exists():
-                samples[name] = p.read_text(encoding="utf-8")
-        self._send_json(samples)
+        self._send_json(load_sample_manifests())
 
     # -------------------------------------------------------------------------
     # Helper & Static File Methods
@@ -402,8 +388,9 @@ class SecureGateHandler(BaseHTTPRequestHandler):
         if path in {"", "/"}:
             path = "/index.html"
 
-        safe_path = (WEB_DIR / path.lstrip("/")).resolve()
-        if not str(safe_path).startswith(str(WEB_DIR.resolve())) or not safe_path.exists():
+        dashboard_dir = web_dir()
+        safe_path = (dashboard_dir / path.lstrip("/")).resolve()
+        if not str(safe_path).startswith(str(dashboard_dir.resolve())) or not safe_path.exists():
             self._send_error(HTTPStatus.NOT_FOUND, "Static file not found")
             return
 
@@ -457,7 +444,7 @@ class SecureGateHandler(BaseHTTPRequestHandler):
         pass
 
 
-def run_server(host: str = "127.0.0.1", port: int = 8088):
+def run_server(host: str = "127.0.0.1", port: int = 8088, open_browser: bool = False):
     """Start the SecureGate API & Dashboard server with automatic port fallback."""
     current_port = port
     max_attempts = 10
@@ -480,15 +467,23 @@ def run_server(host: str = "127.0.0.1", port: int = 8088):
                     f"Could not bind to any port in range {port}-{current_port}: {exc}"
                 )
 
+    browse_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    dashboard_url = f"http://{browse_host}:{current_port}/"
+
     print()
     print("=" * 60)
     print("          SECUREGATE WEB DASHBOARD & REST API")
     print("=" * 60)
-    print(f"  URL             : http://{host}:{current_port}/")
-    print(f"  API Healthcheck : http://{host}:{current_port}/api/status")
+    print(f"  URL             : {dashboard_url}")
+    print(f"  API Healthcheck : {dashboard_url.rstrip('/')}/api/status")
     print("  Press Ctrl+C to stop.")
     print("=" * 60, flush=True)
     print()
+
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(dashboard_url)
 
     try:
         httpd.serve_forever()

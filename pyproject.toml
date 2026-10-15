@@ -30,9 +30,20 @@ dev = [
 [project.scripts]
 securegate = "securegate.cli:app"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["securegate*"]
+
+[tool.setuptools.package-data]
+securegate = [
+    "web/*",
+    "data/*.yaml",
+    "data/*.json",
+    "data/samples/*",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["securegate/tests"]

@@ -2,12 +2,14 @@ from pathlib import Path
 
 import typer
 
+from . import __version__
 from .analyzer import Analyzer
 from .baseline import BaselineStore, DriftDetector
 from .inspectors.kubernetes import KubernetesInspector
 from .json_reporter import JsonReporter
 from .models import ScanResult
 from .parser import TrivyParser
+from .paths import resolve_policy
 from .policy import PolicyEngine
 from .reporter import Reporter
 from .risk import RiskEngine
@@ -17,7 +19,21 @@ from .scanners.trivy import TrivyScanner
 app = typer.Typer(
     name="securegate",
     help="DevSecOps deployment security assurance system.",
+    no_args_is_help=True,
 )
+
+
+def policy_option():
+    return typer.Option(
+        None,
+        "--policy",
+        "-p",
+        help=(
+            "Path to SecureGate policy (YAML or JSON). "
+            "Defaults to config/policy.yaml in the current directory, "
+            "then the packaged policy."
+        ),
+    )
 
 
 @app.command()
@@ -26,12 +42,7 @@ def evaluate(
         ...,
         help="Path to a Trivy JSON report.",
     ),
-    policy: Path = typer.Option(
-        Path("config/policy.json"),
-        "--policy",
-        "-p",
-        help="Path to SecureGate policy.",
-    ),
+    policy: Path | None = policy_option(),
     json_output: Path = typer.Option(
         None,
         "--json-output",
@@ -47,7 +58,7 @@ def evaluate(
 
         analyzer = Analyzer(scan_results)
 
-        policy_engine = PolicyEngine(str(policy))
+        policy_engine = PolicyEngine(str(resolve_policy(policy)))
 
         decision = policy_engine.evaluate(
             analyzer.all_findings()
@@ -98,12 +109,7 @@ def scan(
         ...,
         help="Container image to scan."
     ),
-    policy: Path = typer.Option(
-        Path("config/policy.json"),
-        "--policy",
-        "-p",
-        help="Path to SecureGate policy."
-    ),
+    policy: Path | None = policy_option(),
     output: Path = typer.Option(
         Path("reports/scan.json"),
         "--output",
@@ -139,9 +145,7 @@ def scan(
             scan_results
         )
 
-        policy_engine = PolicyEngine(
-            str(policy)
-        )
+        policy_engine = PolicyEngine(str(resolve_policy(policy)))
 
         decision = policy_engine.evaluate(
             analyzer.all_findings()
@@ -177,12 +181,7 @@ def inspect(
         ...,
         help="Path to a Kubernetes manifest file or directory.",
     ),
-    policy: Path = typer.Option(
-        Path("config/policy.json"),
-        "--policy",
-        "-p",
-        help="Path to SecureGate policy.",
-    ),
+    policy: Path | None = policy_option(),
     json_output: Path = typer.Option(
         None,
         "--json-output",
@@ -207,9 +206,7 @@ def inspect(
             ]
         )
 
-        policy_engine = PolicyEngine(
-            str(policy)
-        )
+        policy_engine = PolicyEngine(str(resolve_policy(policy)))
 
         decision = policy_engine.evaluate(
             analyzer.all_findings()
@@ -260,12 +257,7 @@ def baseline(
         ...,
         help="Path to an approved Kubernetes manifest file or directory."
     ),
-    policy: Path = typer.Option(
-        Path("config/policy.json"),
-        "--policy",
-        "-p",
-        help="Path to SecureGate policy."
-    ),
+    policy: Path | None = policy_option(),
     output: Path = typer.Option(
         Path("baselines/security-baseline.json"),
         "--output",
@@ -290,9 +282,7 @@ def baseline(
             ]
         )
 
-        policy_engine = PolicyEngine(
-            str(policy)
-        )
+        policy_engine = PolicyEngine(str(resolve_policy(policy)))
         decision = policy_engine.evaluate(
             analyzer.all_findings()
         )
@@ -347,12 +337,7 @@ def drift(
         ...,
         help="Path to the current Kubernetes manifest file or directory."
     ),
-    policy: Path = typer.Option(
-        Path("config/policy.json"),
-        "--policy",
-        "-p",
-        help="Path to SecureGate policy."
-    ),
+    policy: Path | None = policy_option(),
 ):
     """Detect security-posture drift against an approved baseline."""
 
@@ -383,9 +368,7 @@ def drift(
             ]
         )
 
-        policy_engine = PolicyEngine(
-            str(policy)
-        )
+        policy_engine = PolicyEngine(str(resolve_policy(policy)))
         decision = policy_engine.evaluate(
             analyzer.all_findings()
         )
@@ -424,12 +407,7 @@ def assess(
         ...,
         help="Path to a Kubernetes manifest file or directory.",
     ),
-    policy: Path = typer.Option(
-        Path("config/policy.json"),
-        "--policy",
-        "-p",
-        help="Path to SecureGate policy.",
-    ),
+    policy: Path | None = policy_option(),
     json_output: Path = typer.Option(
         None,
         "--json-output",
@@ -460,9 +438,7 @@ def assess(
 
         analyzer = Analyzer(all_results)
 
-        policy_engine = PolicyEngine(
-            str(policy)
-        )
+        policy_engine = PolicyEngine(str(resolve_policy(policy)))
         decision = policy_engine.evaluate(
             analyzer.all_findings()
         )
@@ -514,7 +490,13 @@ def assess(
 def version():
     """Display SecureGate version."""
 
-    typer.echo("SecureGate 0.2.0")
+    typer.echo(f"SecureGate {__version__}")
+
+
+def _launch_dashboard(host: str, port: int, open_browser: bool) -> None:
+    from .server import run_server
+
+    run_server(host=host, port=port, open_browser=open_browser)
 
 
 @app.command()
@@ -522,20 +504,45 @@ def serve(
     host: str = typer.Option(
         "127.0.0.1",
         "--host",
-        "-h",
         help="Host address to bind the web dashboard and API server.",
     ),
     port: int = typer.Option(
         8088,
         "--port",
-        "-p",
         help="Port number to run the web dashboard and API server.",
     ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open/--no-open",
+        help="Open the dashboard in the default web browser.",
+    ),
 ):
-    """Run the SecureGate Web Dashboard and REST API server."""
-    from .server import run_server
+    """Run the SecureGate web dashboard and REST API."""
 
-    run_server(host=host, port=port)
+    _launch_dashboard(host, port, open_browser)
+
+
+@app.command()
+def dashboard(
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="Host address to bind the web dashboard and API server.",
+    ),
+    port: int = typer.Option(
+        8088,
+        "--port",
+        help="Port number to run the web dashboard and API server.",
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open/--no-open",
+        help="Open the dashboard in the default web browser.",
+    ),
+):
+    """Open the SecureGate web dashboard in your browser."""
+
+    _launch_dashboard(host, port, open_browser)
 
 
 if __name__ == "__main__":

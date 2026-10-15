@@ -33,10 +33,16 @@ pipeline {
             }
         }
 
+        stage('Install SecureGate') {
+            steps {
+                sh 'python -m pip install -e .'
+            }
+        }
+
         stage('SecureGate Evaluate') {
             steps {
                 sh """
-                    python securegate.py evaluate \
+                    securegate evaluate \
                         reports/scan.json \
                         --policy config/policy.json \
                         --json-output reports/securegate-report.json
@@ -47,7 +53,7 @@ pipeline {
         stage('SecureGate K8s Inspect') {
             steps {
                 sh """
-                    python securegate.py inspect \
+                    securegate inspect \
                         k8s/ \
                         --policy config/policy.json \
                         --json-output reports/k8s-report.json
@@ -58,7 +64,7 @@ pipeline {
         stage('SecureGate Combined Assess') {
             steps {
                 sh """
-                    python securegate.py assess \
+                    securegate assess \
                         reports/scan.json \
                         k8s/ \
                         --policy config/policy.json \
@@ -93,7 +99,7 @@ pipeline {
             }
             steps {
                 sh """
-                    python securegate.py baseline \
+                    securegate baseline \
                         k8s/ \
                         --policy config/policy.json \
                         --output baselines/security-baseline.json

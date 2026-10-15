@@ -26,10 +26,10 @@ SecureGate provides two distinct consumption paths:
 ```
 
 1. **Automated CI/CD Pipeline (Jenkins / Git Hooks)**:
-   The CI agent executes the CLI directly (`python securegate.py assess ...`). It operates headlessly with zero human intervention and deterministic exit codes (`0` for PASS, `1` for BLOCK). It does **not** depend on a web browser or dashboard server.
+   The CI agent executes the installed CLI (`securegate assess ...`). It operates headlessly with zero human intervention and deterministic exit codes (`0` for PASS, `1` for BLOCK). It does **not** depend on a web browser or dashboard server.
 
-2. **Administrator Interactive Dashboard (`securegate serve`)**:
-   Administrators and developers can launch an interactive visual workbench at `http://127.0.0.1:8080/` to test manifests against policies, simulate configuration weakening, inspect historical CI/CD reports, and detect posture drift.
+2. **Administrator Interactive Dashboard (`securegate serve` or `securegate dashboard`)**:
+   Administrators and developers can launch an interactive visual workbench (default `http://127.0.0.1:8088/`). The command opens the page in the default browser unless `--no-open` is passed.
 
 ---
 
@@ -53,24 +53,38 @@ Total Posture Risk (0 - 100) = min(100, Artifact Risk [max 40] + Deployment Risk
 ## 3. Quick Start & CLI Reference
 
 ### Installation
+
+Install once. After that, use the `securegate` command — do not run `python securegate.py`.
+
 ```bash
-pip install -r requirements.txt
-# Or install editable:
-pip install -e .
+python -m pip install -e .
+securegate version
 ```
+
+`python -m securegate` works as well if the `securegate` script is not on `PATH`.
+
+### Web dashboard
+
+```bash
+securegate serve
+# or:
+securegate dashboard
+```
+
+This starts the local UI and opens it in your browser. Use `--no-open` to print the URL only, and `--port 8080` to pick a port.
 
 ### CLI Commands
 
 | Command | Purpose | Example |
 |:---|:---|:---|
-| `serve` | Launch Web Dashboard & REST API | `python securegate.py serve --port 8080` |
-| `assess` | Combined Artifact + K8s evaluation | `python securegate.py assess reports/scan.json k8s/enterprise-sample.yaml --policy config/policy.yaml` |
-| `inspect` | Inspect K8s deployment manifests | `python securegate.py inspect k8s/enterprise-sample.yaml --policy config/policy.yaml` |
-| `evaluate` | Evaluate existing Trivy scan report | `python securegate.py evaluate reports/scan.json --policy config/policy.yaml` |
-| `baseline` | Save approved security baseline | `python securegate.py baseline k8s/enterprise-sample.yaml -o baselines/production.json` |
-| `drift` | Detect posture drift against baseline | `python securegate.py drift baselines/production.json k8s/enterprise-sample.yaml` |
-| `scan` | Scan container image via Trivy | `python securegate.py scan secure-app:1.0.0 -o reports/scan.json` |
-| `version` | Display version info | `python securegate.py version` |
+| `serve` / `dashboard` | Launch web dashboard (opens browser) | `securegate serve` |
+| `assess` | Combined Artifact + K8s evaluation | `securegate assess reports/scan.json k8s/enterprise-sample.yaml --policy config/policy.yaml` |
+| `inspect` | Inspect K8s deployment manifests | `securegate inspect k8s/enterprise-sample.yaml --policy config/policy.yaml` |
+| `evaluate` | Evaluate existing Trivy scan report | `securegate evaluate reports/scan.json --policy config/policy.yaml` |
+| `baseline` | Save approved security baseline | `securegate baseline k8s/enterprise-sample.yaml -o baselines/production.json` |
+| `drift` | Detect posture drift against baseline | `securegate drift baselines/production.json k8s/enterprise-sample.yaml` |
+| `scan` | Scan container image via Trivy | `securegate scan secure-app:1.0.0 -o reports/scan.json` |
+| `version` | Display version info | `securegate version` |
 
 ---
 

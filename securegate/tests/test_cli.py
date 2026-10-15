@@ -3,6 +3,7 @@ from textwrap import dedent
 
 from typer.testing import CliRunner
 
+from securegate import __version__
 from securegate.cli import app
 
 
@@ -254,3 +255,21 @@ def test_drift_returns_block_exit_code_for_security_posture_drift(tmp_path):
     assert drift_result.exit_code == 1
     assert "SECURITY DECISION: BLOCK" in drift_result.output
     assert "DRIFT_POD_CONTAINERS_APP_SECURITYCONTEXT_PRIVILEGED" in drift_result.output
+
+
+def test_version_uses_package_version():
+    runner = CliRunner()
+    result = runner.invoke(app, ["version"])
+    assert result.exit_code == 0
+    assert __version__ in result.output
+
+
+def test_serve_and_dashboard_expose_browser_option():
+    runner = CliRunner()
+    serve = runner.invoke(app, ["serve", "--help"])
+    dashboard = runner.invoke(app, ["dashboard", "--help"])
+    assert serve.exit_code == 0
+    assert dashboard.exit_code == 0
+    assert "--open" in serve.output
+    assert "--no-open" in serve.output
+    assert "--open" in dashboard.output
