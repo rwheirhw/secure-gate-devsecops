@@ -147,8 +147,12 @@ The dashboard is served locally without external server dependencies via standar
 
 ## 6. Testing
 
-All 49 tests run with standard `pytest`:
+The current test suite contains 55 tests and runs with standard `pytest`:
 
 ```bash
 python -m pytest -v
 ```
+
+For the next hardening priorities and the boundary with SAT and identity
+capabilities, see
+[DEVSECOPS_DEFENSIBILITY_ROADMAP.md](./DEVSECOPS_DEFENSIBILITY_ROADMAP.md).
