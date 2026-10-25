@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SecureGate - DevSecOps Deployment Security Assurance</title>
+  <title>SecureGate — Deployment Security Console</title>
   <meta name="description" content="Automated container and Kubernetes deployment security assurance dashboard, policy enforcement, and posture drift detection.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,61 +11,141 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-theme">
-  <!-- Top Navigation Bar -->
-  <header class="app-header">
-    <div class="header-brand">
-      <div class="logo-shield">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <path d="M9 12l2 2 4-4"/>
-        </svg>
+  <div class="app-shell">
+    <aside class="app-sidebar" aria-label="Primary navigation">
+      <div class="header-brand">
+        <div class="logo-shield" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <h1 class="brand-title">SecureGate</h1>
+          <span class="brand-subtitle">Deployment security</span>
+        </div>
+        <span class="version-badge" id="appVersion">v0.2.0</span>
       </div>
-      <div>
-        <h1 class="brand-title">SecureGate</h1>
-        <span class="brand-subtitle">DevSecOps Deployment Assurance</span>
+
+      <div class="sidebar-group-label">WORKSPACE</div>
+      <nav class="nav-tabs" role="tablist" aria-label="Workspace views">
+        <button class="nav-tab active" id="tabDashboard" data-target="viewDashboard" role="tab" aria-selected="true">
+          <span class="nav-icon" aria-hidden="true">▦</span><span>Dashboard</span>
+        </button>
+        <button class="nav-tab" id="tabWorkbench" data-target="viewWorkbench" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">⌕</span><span>Target Scan</span>
+        </button>
+        <button class="nav-tab" id="tabPipeline" data-target="viewPipeline" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">≡</span><span>Logs &amp; Events</span>
+        </button>
+        <button class="nav-tab" id="tabDrift" data-target="viewDrift" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">↔</span><span>Drift &amp; Baseline</span>
+        </button>
+        <button class="nav-tab" id="tabPolicy" data-target="viewPolicy" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">⚙</span><span>Settings &amp; Policy</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-status-row"><span class="status-dot" id="engineStatusDot"></span><span class="sidebar-status-label">API STATUS</span></div>
+        <div class="sidebar-status-value" id="engineStatusText">Checking connection…</div>
+        <div class="sidebar-footnote">Local security assurance workspace</div>
       </div>
-      <span class="version-badge" id="appVersion">v0.2.0</span>
-    </div>
+    </aside>
 
-    <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist">
-      <button class="nav-tab active" id="tabWorkbench" data-target="viewWorkbench" role="tab">
-        <span class="tab-icon">🛡️</span> Assessment Workbench
-      </button>
-      <button class="nav-tab" id="tabPipeline" data-target="viewPipeline" role="tab">
-        <span class="tab-icon">📊</span> CI/CD Audit Reports
-      </button>
-      <button class="nav-tab" id="tabDrift" data-target="viewDrift" role="tab">
-        <span class="tab-icon">🔄</span> Drift & Baseline
-      </button>
-      <button class="nav-tab" id="tabPolicy" data-target="viewPolicy" role="tab">
-        <span class="tab-icon">📜</span> Security Policy
-      </button>
-    </nav>
+    <div class="app-workspace">
+      <header class="topbar">
+        <div class="topbar-title-group">
+          <div class="eyebrow">SECUREGATE <span class="eyebrow-divider">/</span> <span id="sectionEyebrow">OVERVIEW</span></div>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="topbar-meta"><span class="environment-indicator"><span class="environment-dot"></span> LOCAL ENVIRONMENT</span></div>
+      </header>
 
-    <div class="header-status">
-      <span class="status-dot"></span>
-      <span id="engineStatusText">REST API Active</span>
-    </div>
-  </header>
+      <main class="app-main">
+        <!-- VIEW 0: Dashboard overview -->
+        <section id="viewDashboard" class="tab-view active" aria-labelledby="pageTitle">
+          <div class="dashboard-intro">
+            <div>
+              <div class="section-kicker">SECURITY OVERVIEW</div>
+              <h2>Deployment security at a glance</h2>
+              <p>Review policy posture, run a Kubernetes manifest assessment, and inspect recent workspace activity.</p>
+            </div>
+            <button type="button" class="btn btn-secondary" id="btnOpenTargetScan">Open target scan <span aria-hidden="true">→</span></button>
+          </div>
 
-  <!-- Main Content Area -->
-  <main class="app-main">
+          <div class="dashboard-metrics-grid" aria-label="Security metrics">
+            <article class="dashboard-metric-card">
+              <div class="metric-card-top"><span class="metric-name">Blocking findings</span><span class="metric-symbol metric-symbol-danger">!</span></div>
+              <div class="dashboard-metric-value" id="dashActiveThreats">—</div>
+              <div class="metric-foot"><span class="tiny-status tiny-status-muted"></span> Latest assessment</div>
+            </article>
+            <article class="dashboard-metric-card">
+              <div class="metric-card-top"><span class="metric-name">Assessments completed</span><span class="metric-symbol">↗</span></div>
+              <div class="dashboard-metric-value" id="dashScansCompleted">0</div>
+              <div class="metric-foot">This page session</div>
+            </article>
+            <article class="dashboard-metric-card">
+              <div class="metric-card-top"><span class="metric-name">API health</span><span class="metric-symbol metric-symbol-success">●</span></div>
+              <div class="dashboard-metric-value metric-value-text" id="dashApiStatus">Checking…</div>
+              <div class="metric-foot" id="dashApiMeta">Connecting to local service</div>
+            </article>
+            <article class="dashboard-metric-card">
+              <div class="metric-card-top"><span class="metric-name">Saved baselines</span><span class="metric-symbol">⌁</span></div>
+              <div class="dashboard-metric-value" id="dashBaselineCount">—</div>
+              <div class="metric-foot">Approved posture snapshots</div>
+            </article>
+          </div>
+
+          <div class="dashboard-main-grid">
+            <section class="card activity-card" aria-labelledby="activityTitle">
+              <div class="card-header activity-card-header">
+                <div><div class="section-kicker">WORKSPACE ACTIVITY</div><h2 class="card-title" id="activityTitle">Event stream</h2><p class="card-desc">Actions and API results from this dashboard session.</p></div>
+                <div class="activity-header-actions"><span class="stream-status"><span class="stream-status-dot"></span> SESSION LOG</span><button type="button" class="text-button" id="btnClearActivity">Clear</button></div>
+              </div>
+              <div class="terminal-window">
+                <div class="terminal-toolbar"><div class="terminal-dots" aria-hidden="true"><span></span><span></span><span></span></div><span class="terminal-label">securegate · activity.log</span><span class="terminal-live">LOCAL</span></div>
+                <div class="terminal-body" id="activityLog" role="log" aria-live="polite" aria-relevant="additions text">
+                  <div class="log-line"><time>--:--:--</time><span class="log-level log-info">INFO</span><span class="log-message">Dashboard initialized; checking API connectivity…</span></div>
+                  <div id="activityLogList"></div>
+                  <div class="terminal-cursor-row"><span class="terminal-prompt">›</span><span class="terminal-cursor" aria-hidden="true"></span></div>
+                </div>
+              </div>
+              <p class="panel-footnote">This stream records actions performed in the UI; it is not a live host or network packet capture.</p>
+            </section>
+
+            <section class="card quick-action-card" aria-labelledby="quickActionTitle">
+              <div class="card-header"><div><div class="section-kicker">QUICK ACTION</div><h2 class="card-title" id="quickActionTitle">Assess a manifest</h2><p class="card-desc">Run the Kubernetes policy inspector against a bundled sample.</p></div><span class="quick-action-mark" aria-hidden="true">⌘</span></div>
+              <div class="quick-form">
+                <div class="option-field"><label for="quickPreset">Sample manifest</label><select id="quickPreset" class="custom-select"><option value="enterprise">Hardened sample</option><option value="weakened">Weakened configuration</option><option value="insecure">High-risk sample</option></select></div>
+                <div class="option-field"><label for="quickPolicyFile">Policy configuration</label><select id="quickPolicyFile" class="custom-select"><option value="config/policy.yaml">config/policy.yaml</option><option value="config/policy.json">config/policy.json</option></select></div>
+                <button type="button" class="btn btn-primary quick-run-button" id="btnQuickAssessment" disabled><span aria-hidden="true">▶</span> Run sample assessment</button>
+                <button type="button" class="btn btn-secondary quick-secondary-button" id="btnQuickOpenResults">Open full assessment results <span aria-hidden="true">→</span></button>
+              </div>
+              <div class="quick-action-note"><span class="note-icon" aria-hidden="true">i</span><p>This action checks Kubernetes manifest configuration. Container vulnerability findings can be included from a Trivy JSON report in Target Scan.</p></div>
+            </section>
+          </div>
+
+          <section class="dashboard-lower-row">
+            <div class="card lower-info-card"><div class="section-kicker">POLICY GATE</div><h3>Policy decision comes first</h3><p>Mandatory <code>BLOCK</code> rules can stop a deployment regardless of the numerical risk score.</p><button type="button" class="inline-link" id="btnViewPolicy">Review policy rules <span aria-hidden="true">→</span></button></div>
+            <div class="card lower-info-card"><div class="section-kicker">CONFIGURATION DRIFT</div><h3>Compare against an approved baseline</h3><p>Saved posture snapshots help identify changes from an approved Kubernetes configuration.</p><button type="button" class="inline-link" id="btnViewDrift">Open baseline inspector <span aria-hidden="true">→</span></button></div>
+          </section>
+        </section>
 
     <!-- VIEW 1: Assessment Workbench -->
-    <section id="viewWorkbench" class="tab-view active">
+    <section id="viewWorkbench" class="tab-view" aria-label="Target scan workbench">
       <div class="workbench-grid">
         <!-- Left Column: Input Form & Editor -->
         <div class="card editor-card">
           <div class="card-header">
             <div>
-              <h2 class="card-title">Deployment Manifest Inspector</h2>
+              <h2 class="card-title">Target scan workbench</h2>
               <p class="card-desc">Inspect Kubernetes YAML configuration & evaluate artifact CVE findings.</p>
             </div>
             <!-- Quick Preset Templates -->
             <div class="template-pills">
               <span class="pill-label">Presets:</span>
-              <button type="button" class="pill-btn active" id="btnPresetEnterprise">Enterprise Hardened</button>
+              <button type="button" class="pill-btn active" id="btnPresetEnterprise">Hardened Sample</button>
               <button type="button" class="pill-btn" id="btnPresetWeakened">Weakened (Privileged)</button>
               <button type="button" class="pill-btn" id="btnPresetInsecure">High-Risk Sample</button>
             </div>
@@ -204,7 +284,7 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">CI/CD Pipeline Artifacts & Audit Logs</h2>
-            <p class="card-desc">Inspect security evaluation reports generated by automated Jenkins pipeline runs.</p>
+            <p class="card-desc">Browse JSON reports produced by SecureGate and your CI/CD workflow.</p>
           </div>
           <button id="btnRefreshReports" class="btn btn-small">↻ Refresh</button>
         </div>
@@ -232,7 +312,7 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Post-Deployment Configuration Drift Detector</h2>
+            <h2 class="card-title">Configuration drift inspector</h2>
             <p class="card-desc">Compare live cluster configuration against an approved baseline snapshot.</p>
           </div>
         </div>
@@ -287,7 +367,7 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Security Policy-as-Code Configuration</h2>
+            <h2 class="card-title">Policy configuration</h2>
             <p class="card-desc">Enforced deployment gates, severity rules, and max allowed thresholds.</p>
           </div>
         </div>
@@ -345,7 +425,9 @@
       </div>
     </section>
 
-  </main>
+      </main>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
