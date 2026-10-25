@@ -23,3 +23,5 @@ htmlcov/
 reports/*.json
 !reports/scan.json
 baselines/*.json
+
+securegate/__pycache__
