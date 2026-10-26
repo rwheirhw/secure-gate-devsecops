@@ -6,8 +6,14 @@ class Reporter:
     @staticmethod
     def print_report(
         decision: PolicyDecision,
-        analyzer
+        analyzer,
+        risk=None,
     ):
+        all_findings = analyzer.all_findings()
+        vulnerability_only = bool(all_findings) and all(
+            finding.category == "vulnerability"
+            for finding in all_findings
+        )
 
         print()
         print("=" * 60)
@@ -44,7 +50,7 @@ class Reporter:
         print("-" * 60)
 
         print(
-            f"Blocking vulnerabilities : "
+            f"{'Blocking vulnerabilities' if vulnerability_only else 'Blocking findings':<25}: "
             f"{len(decision.blocking)}"
         )
 
@@ -60,33 +66,73 @@ class Reporter:
 
         if decision.blocking:
             print()
-            print("BLOCKING VULNERABILITIES")
+            print(
+                "BLOCKING VULNERABILITIES"
+                if vulnerability_only
+                else "BLOCKING FINDINGS"
+            )
             print("-" * 60)
 
-            for vulnerability in decision.blocking:
+            for finding in decision.blocking:
                 fixed = (
-                    vulnerability.fixed_version
+                    finding.fixed_version
                     or "No fix available"
                 )
 
-                print(
-                    f"{vulnerability.vulnerability_id:<18} "
-                    f"{vulnerability.severity:<8} "
-                    f"{vulnerability.package:<20} "
-                    f"Fix: {fixed}"
-                )
+                if finding.category == "vulnerability":
+                    print(
+                        f"{finding.vulnerability_id:<18} "
+                        f"{finding.severity:<8} "
+                        f"{finding.package:<20} "
+                        f"Fix: {fixed}"
+                    )
+                else:
+                    print(
+                        f"{finding.id:<28} "
+                        f"{finding.severity:<8} "
+                        f"{finding.resource} - "
+                        f"{finding.message}"
+                    )
 
         if decision.warnings:
             print()
             print("WARNINGS")
             print("-" * 60)
 
-            for vulnerability in decision.warnings:
-                print(
-                    f"{vulnerability.vulnerability_id:<18} "
-                    f"{vulnerability.severity:<8} "
-                    f"{vulnerability.package}"
-                )
+            for finding in decision.warnings:
+                if finding.category == "vulnerability":
+                    print(
+                        f"{finding.vulnerability_id:<18} "
+                        f"{finding.severity:<8} "
+                        f"{finding.package}"
+                    )
+                else:
+                    print(
+                        f"{finding.id:<28} "
+                        f"{finding.severity:<8} "
+                        f"{finding.resource} - "
+                        f"{finding.message}"
+                    )
+
+        if risk:
+            print()
+            print("RISK ASSESSMENT")
+            print("-" * 60)
+            print(
+                f"{'Artifact Risk':<20}: {risk.artifact_risk}"
+            )
+            print(
+                f"{'Deployment Risk':<20}: {risk.deployment_risk}"
+            )
+            print(
+                f"{'Drift Risk':<20}: {risk.drift_risk}"
+            )
+            print(
+                f"{'Total Risk':<20}: {risk.total_risk}/100"
+            )
+            print(
+                f"{'Risk Level':<20}: {risk.level}"
+            )
 
         print()
         print("=" * 60)

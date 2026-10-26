@@ -17,18 +17,24 @@ class Analyzer:
     def __init__(self, scan_results: list[ScanResult]):
         self.scan_results = scan_results
 
-    def vulnerabilities(self):
+    def findings(self):
         for result in self.scan_results:
-            yield from result.vulnerabilities
+            yield from result.findings
+
+    def all_findings(self):
+        return list(self.findings())
+
+    def vulnerabilities(self):
+        return self.findings()
 
     def all_vulnerabilities(self):
-        return list(self.vulnerabilities())
+        return self.all_findings()
 
     def severity_counts(self):
         counts = Counter()
 
-        for vulnerability in self.vulnerabilities():
-            severity = vulnerability.severity
+        for finding in self.findings():
+            severity = finding.severity
 
             if severity not in VALID_SEVERITIES:
                 severity = "UNKNOWN"
@@ -54,8 +60,8 @@ class Analyzer:
     def fixable_count(self):
         return sum(
             1
-            for vulnerability in self.vulnerabilities()
-            if vulnerability.fixed_version
+            for finding in self.findings()
+            if finding.fixed_version
         )
 
     def targets(self):
