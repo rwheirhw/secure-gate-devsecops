@@ -71,6 +71,7 @@ class TrivyParser:
                 )
                 fixed_version = vuln.get("FixedVersion")
                 title = vuln.get("Title")
+                description = vuln.get("Description")
 
                 parsed_findings.append(
                     Finding(
@@ -89,6 +90,7 @@ class TrivyParser:
                             "package": package,
                             "installed_version": installed_version,
                             "fixed_version": fixed_version,
+                            "description": description,
                         },
                         metadata={
                             "vulnerability_id": vulnerability_id,
@@ -97,6 +99,7 @@ class TrivyParser:
                             "fixed_version": fixed_version,
                             "target": str(target),
                             "title": title,
+                            "description": description,
                             "primary_url": vuln.get("PrimaryURL"),
                             "status": vuln.get("Status"),
                         }

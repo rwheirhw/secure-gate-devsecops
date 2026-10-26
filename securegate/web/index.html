@@ -118,7 +118,7 @@
               <div class="card-header"><div><div class="section-kicker">QUICK ACTION</div><h2 class="card-title" id="quickActionTitle">Assess a manifest</h2><p class="card-desc">Run the Kubernetes policy inspector against a bundled sample.</p></div><span class="quick-action-mark" aria-hidden="true">⌘</span></div>
               <div class="quick-form">
                 <div class="option-field"><label for="quickPreset">Sample manifest</label><select id="quickPreset" class="custom-select"><option value="enterprise">Hardened sample</option><option value="weakened">Weakened configuration</option><option value="insecure">High-risk sample</option></select></div>
-                <div class="option-field"><label for="quickPolicyFile">Policy configuration</label><select id="quickPolicyFile" class="custom-select"><option value="config/policy.yaml">config/policy.yaml</option><option value="config/policy.json">config/policy.json</option></select></div>
+                <div class="option-field"><label for="quickPolicyFile">Policy configuration</label><select id="quickPolicyFile" class="custom-select"><option value="config/policy.yaml">config/policy.yaml</option><option value="config/policy-development.yaml">Development baseline</option><option value="config/policy-staging.yaml">Staging baseline</option><option value="config/policy-production.yaml">Production baseline</option><option value="config/policy.json">config/policy.json</option></select></div>
                 <button type="button" class="btn btn-primary quick-run-button" id="btnQuickAssessment" disabled><span aria-hidden="true">▶</span> Run sample assessment</button>
                 <button type="button" class="btn btn-secondary quick-secondary-button" id="btnQuickOpenResults">Open full assessment results <span aria-hidden="true">→</span></button>
               </div>
@@ -174,6 +174,9 @@
               <label for="selectPolicyFile">Active Policy:</label>
               <select id="selectPolicyFile" class="custom-select">
                 <option value="config/policy.yaml" selected>config/policy.yaml (Default)</option>
+                <option value="config/policy-development.yaml">config/policy-development.yaml (Development)</option>
+                <option value="config/policy-staging.yaml">config/policy-staging.yaml (Staging)</option>
+                <option value="config/policy-production.yaml">config/policy-production.yaml (Production)</option>
                 <option value="config/policy.json">config/policy.json (JSON)</option>
               </select>
             </div>

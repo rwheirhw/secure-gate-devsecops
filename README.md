@@ -156,3 +156,128 @@ python -m pytest -v
 For the next hardening priorities and the boundary with SAT and identity
 capabilities, see
 [DEVSECOPS_DEFENSIBILITY_ROADMAP.md](./DEVSECOPS_DEFENSIBILITY_ROADMAP.md).
+
+## 7. Scenario guide
+
+### First local assessment
+
+1. Install Python 3.10 or newer and install SecureGate in editable mode.
+2. Choose a policy for the environment: `config/policy-development.yaml`,
+   `config/policy-staging.yaml`, or `config/policy-production.yaml`.
+3. Inspect a manifest:
+
+   ```bash
+   securegate inspect k8s/deployment.yaml \
+     --policy config/policy-development.yaml \
+     --json-output reports/deployment-assessment.json
+   ```
+
+4. Read the exit code: `0` means no blocking finding, `1` means policy
+   `BLOCK`, and `2` means an execution or input error.
+
+Use `securegate assess` when the deployment and a Trivy report should be
+evaluated together. Use `securegate evaluate` when a Trivy JSON report already
+exists.
+
+### Container image workflow
+
+Trivy must be installed separately and available on `PATH`.
+
+```bash
+securegate scan ghcr.io/example/service:1.2.3 \
+  --output reports/service-1.2.3-trivy.json \
+  --policy config/policy-staging.yaml
+securegate evaluate reports/service-1.2.3-trivy.json \
+  --policy config/policy-production.yaml \
+  --json-output reports/service-1.2.3-assessment.json
+```
+
+The report keeps the CVE ID, package, installed and fixed versions, status,
+title, description, and Trivy `PrimaryURL`. The dashboard uses that URL for
+the CVE link and shows the description when the finding ID is hovered.
+
+### Creating and checking a new approved baseline
+
+Baselines are approved posture snapshots, not policy files. First make the
+manifest pass the chosen policy, then save its posture:
+
+```bash
+securegate inspect k8s/enterprise-sample.yaml \
+  --policy config/policy-production.yaml
+securegate baseline k8s/enterprise-sample.yaml \
+  --policy config/policy-production.yaml \
+  --output baselines/production-baseline.json
+securegate drift baselines/production-baseline.json \
+  k8s/enterprise-sample.yaml
+```
+
+The baseline records the manifest path, approval timestamp, posture, and risk
+assessment. Commit reviewed baseline JSON to the same repository as the
+manifest. Recreate it intentionally after an approved security change; do not
+silence drift by overwriting it during an incident.
+
+The dashboard offers the same workflow under **Target Scan** and
+**Drift & Baseline**. The **Save baseline** action is enabled only after a
+passing assessment.
+
+### Writing a custom policy
+
+Copy the closest environment policy and change only the rules needed by the
+team:
+
+```bash
+Copy-Item config/policy-staging.yaml config/policy-team-a.yaml
+securegate assess reports/scan.json k8s/deployment.yaml `
+  --policy config/policy-team-a.yaml
+```
+
+Rules are resolved in this order: `ignored_findings` /
+`ignored_vulnerabilities`, exact `finding_policy` ID, `category_policy`, and
+then `severity_policy`. `max_allowed` can promote findings to `BLOCK` when a
+severity count exceeds its limit. Keep exceptions narrow, time-bound, and
+reviewed; an ignored finding is excluded from both the decision and the
+maximum-count calculation.
+
+### CI/CD and Jenkins
+
+Run the CLI from the repository or a clean build agent. A pipeline should
+archive `reports/*.json` and fail the deployment on exit code `1`:
+
+```groovy
+sh '''
+  securegate assess reports/scan.json k8s/deployment.yaml \
+    --policy config/policy-production.yaml \
+    --json-output reports/securegate-assessment.json
+'''
+archiveArtifacts artifacts: 'reports/*.json', allowEmptyArchive: false
+```
+
+Do not make the pipeline depend on the dashboard. The dashboard is an
+operator view of reports and is not required for enforcement.
+
+### Dashboard and API
+
+Start the local dashboard with `securegate serve --no-open --port 8088`, then
+open `http://127.0.0.1:8088/`. Select a sample or paste a manifest, choose a
+policy, attach a report, and run the assessment. The API endpoints are
+`/api/assess`, `/api/inspect`, `/api/baseline/save`, `/api/drift`,
+`/api/reports`, and `/api/baselines`.
+
+Finding links open only `http` or `https` URLs in a new tab with
+`noopener noreferrer`. If a scanner provides no safe URL, the CVE remains
+visible as plain text and its description is still available through the
+hover text.
+
+### Common failures
+
+- **Policy not found:** pass an explicit path, set `SECUREGATE_POLICY`, or add
+  `config/policy.yaml`.
+- **Trivy not found:** install Trivy and verify `trivy --version`.
+- **Invalid report:** ensure the file is Trivy JSON and contains a `Results`
+  list.
+- **Unexpected `BLOCK`:** inspect the blocking tab or JSON
+  `blocking_findings`; exact finding rules and `max_allowed` can override the
+  severity score.
+- **Drift after a harmless reorder:** list values are normalized before
+  comparison, but changing a security-sensitive field is intentionally
+  reported.

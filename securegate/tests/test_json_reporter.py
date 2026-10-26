@@ -23,6 +23,9 @@ def test_json_reporter_generates_complete_dict(tmp_path):
             "installed_version": "1.1.1",
             "fixed_version": "1.1.2",
             "target": "my-app:latest",
+            "title": "OpenSSL issue",
+            "description": "Readable details",
+            "primary_url": "https://example.test/cve",
         },
     )
     k8s = Finding(
@@ -93,6 +96,8 @@ def test_json_reporter_generates_complete_dict(tmp_path):
     assert vuln_dict["package"] == "openssl"
     assert vuln_dict["installed_version"] == "1.1.1"
     assert vuln_dict["fixed_version"] == "1.1.2"
+    assert vuln_dict["description"] == "Readable details"
+    assert vuln_dict["primary_url"] == "https://example.test/cve"
     assert vuln_dict["evidence"] == {"cve": "CVE-2024-1111"}
 
     assert len(report["ignored_findings"]) == 1

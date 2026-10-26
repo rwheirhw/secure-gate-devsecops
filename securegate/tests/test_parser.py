@@ -20,6 +20,7 @@ def test_trivy_parser_converts_vulnerabilities_to_findings(tmp_path):
                                 "FixedVersion": "1.2.4-r6",
                                 "Severity": "high",
                                 "Title": "musl vulnerability",
+                                "Description": "A readable vulnerability description.",
                                 "PrimaryURL": "https://example.test/cve",
                                 "Status": "fixed",
                             }
@@ -48,6 +49,8 @@ def test_trivy_parser_converts_vulnerabilities_to_findings(tmp_path):
     assert finding.evidence["target"] == "alpine:3.19"
     assert finding.metadata["installed_version"] == "1.2.4-r0"
     assert finding.metadata["fixed_version"] == "1.2.4-r6"
+    assert finding.metadata["description"] == "A readable vulnerability description."
+    assert finding.metadata["primary_url"] == "https://example.test/cve"
 
     assert finding.vulnerability_id == "CVE-2026-40200"
     assert finding.package == "musl"

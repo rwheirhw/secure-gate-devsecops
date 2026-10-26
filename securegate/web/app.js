@@ -93,6 +93,16 @@ document.addEventListener('DOMContentLoaded', () => {
     })[char]);
   }
 
+  function safeExternalUrl(value) {
+    if (!value) return '';
+    try {
+      const url = new URL(String(value));
+      return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch {
+      return '';
+    }
+  }
+
   function logActivity(level, message) {
     if (!activityLogList) return;
     const time = new Date().toLocaleTimeString([], { hour12: false });
@@ -392,8 +402,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const badgeClass = ['CRITICAL', 'HIGH'].includes(severity) ? 'badge-block' : (severity === 'LOW' ? 'badge-allow' : 'badge-warn');
       const categoryTag = finding.category ? `<span class="badge badge-warn">${escapeHtml(finding.category)}</span>` : '';
       const fixedInfo = finding.fixed_version ? `<span style="color:#75dcb2;font-size:10px;">Fix available: ${escapeHtml(finding.fixed_version)}</span>` : '';
+      const cveUrl = finding.category === 'vulnerability' ? safeExternalUrl(finding.primary_url) : '';
+      const findingLabel = cveUrl
+        ? `<a class="finding-cve-link" href="${escapeHtml(cveUrl)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(finding.description || finding.title || 'Open vulnerability details')}">${escapeHtml(finding.id || 'FINDING')}<span aria-hidden="true"> ↗</span></a>`
+        : `<span class="finding-id"${finding.description ? ` title="${escapeHtml(finding.description)}"` : ''}>${escapeHtml(finding.id || 'FINDING')}</span>`;
       return `<div class="finding-item">
-        <div class="finding-top-row"><span class="finding-id">${escapeHtml(finding.id || 'FINDING')}</span>
+        <div class="finding-top-row">${findingLabel}
           <div>${categoryTag}<span class="badge ${badgeClass}">${escapeHtml(severity)}</span></div>
         </div>
         <div class="finding-message">${escapeHtml(finding.message || 'Security control violation')}</div>

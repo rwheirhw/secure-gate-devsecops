@@ -59,11 +59,7 @@ class JsonReporter:
         ]
 
         report["ignored_findings"] = [
-            {
-                "id": finding.id,
-                "severity": finding.severity,
-                "category": finding.category,
-            }
+            JsonReporter._finding_to_dict(finding)
             for finding in decision.ignored
         ]
 
@@ -114,5 +110,9 @@ class JsonReporter:
                 finding.fixed_version
                 or None
             )
+            result["title"] = finding.title
+            result["description"] = finding.metadata.get("description")
+            result["primary_url"] = finding.metadata.get("primary_url")
+            result["status"] = finding.metadata.get("status")
 
         return result
