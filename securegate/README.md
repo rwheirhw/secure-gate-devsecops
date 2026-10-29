@@ -56,3 +56,142 @@ description. Unsafe or absent URLs are never made clickable.
 Run the test suite with `python -m pytest -v`. For API consumers, use
 `GET /api/status` as a health check and `POST /api/assess` or
 `POST /api/inspect` for evaluations.
+
+## Windows presentation setup
+
+The package is installed on this machine, and `python -m securegate` works.
+The standalone `securegate` launcher is currently not on `PATH`, so use the
+module form for a reliable command:
+
+```powershell
+cd C:\Users\chara\SecureGate
+python -m securegate version
+python -m securegate inspect k8s\deployment.yaml `
+  --policy config\policy-production.yaml
+python -m securegate serve --no-open --port 8088
+```
+
+After `python -m pip install -e .`, the launcher is normally created under
+`%APPDATA%\Python\Python314\Scripts` for this installation. To make
+`securegate` available in future PowerShell windows, add the actual Scripts
+directory for your Python installation:
+
+```powershell
+$scripts = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+[Environment]::SetEnvironmentVariable(
+  'Path',
+  [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $scripts,
+  'User'
+)
+```
+
+Close and reopen PowerShell, then verify:
+
+```powershell
+Get-Command securegate
+securegate version
+```
+
+If the command is still not found in an already-open terminal, that terminal
+is using the old PATH snapshot. Refresh it for the current session:
+
+```powershell
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'User') + ';' +
+  [Environment]::GetEnvironmentVariable('Path', 'Machine')
+Get-Command securegate
+securegate version
+```
+
+Alternatively, close every PowerShell window and open a new one. The current
+working directory (`C:\Windows\System32`, for example) does not affect command
+discovery; PATH does.
+
+Do not add a guessed Python version directory. Use the `$scripts` value
+printed by the command. The module form remains valid even when the launcher
+is not on `PATH`.
+
+## Running a realistic local Kubernetes sample
+
+SecureGate does not need a Kubernetes cluster to inspect YAML. It analyzes
+manifests locally. A cluster is only needed to prove that the workload
+actually starts. The repository includes
+`k8s\production-demo.yaml`, which contains a namespace, ConfigMap, Secret,
+two-replica Deployment, resource limits, probes, and an internal ClusterIP
+Service.
+
+Docker Desktop is installed on the presentation machine. The simplest
+cluster option is to enable **Kubernetes** in Docker Desktop settings and
+wait until the Docker Desktop Kubernetes status is `Running`. Confirm the
+context:
+
+```powershell
+kubectl config current-context
+kubectl get nodes
+```
+
+Build the included non-root demo application image:
+
+```powershell
+docker build -t securegate-demo:1.0.0 app
+```
+
+Evaluate the production-like manifest before applying it:
+
+```powershell
+python -m securegate inspect k8s\production-demo.yaml `
+  --policy config\policy-production.yaml `
+  --json-output reports\production-demo-assessment.json
+```
+
+Apply and verify it:
+
+```powershell
+kubectl apply -f k8s\production-demo.yaml
+kubectl -n securegate-demo rollout status deployment/securegate-demo
+kubectl -n securegate-demo get pods,service
+kubectl -n securegate-demo port-forward service/securegate-demo 8000:80
+```
+
+With port-forwarding active, open `http://127.0.0.1:8000`. Clean up after
+the presentation:
+
+```powershell
+kubectl delete namespace securegate-demo
+```
+
+The local manifest check and the cluster run are separate checks: SecureGate
+validates declared security posture, while Kubernetes validates scheduling,
+image availability, probes, and runtime behavior.
+
+### Important sample distinction
+
+`k8s\enterprise-sample.yaml` contains deliberate security-toggle examples.
+Its container currently has `privileged: true`, so it is expected to produce
+a blocking finding despite its surrounding comments. Use
+`k8s\deployment.yaml` or `k8s\production-demo.yaml` for the passing demo, and
+use `k8s\insecure-sample.yaml` to demonstrate intentional failures.
+
+## Optional container vulnerability demonstration
+
+Install Trivy separately if you want live CVE scanning:
+
+```powershell
+trivy --version
+python -m securegate scan nginx:1.27-alpine `
+  --output reports\nginx-trivy.json `
+  --policy config\policy-staging.yaml
+```
+
+Then combine that report with the Kubernetes assessment:
+
+```powershell
+python -m securegate assess `
+  reports\nginx-trivy.json `
+  k8s\production-demo.yaml `
+  --policy config\policy-production.yaml `
+  --json-output reports\combined-assessment.json
+```
+
+For a presentation without Trivy, use the checked-in
+`reports\scan.json`; SecureGate can evaluate an existing Trivy JSON report
+without running a scanner.
