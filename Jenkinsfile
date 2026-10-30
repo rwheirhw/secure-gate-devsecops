@@ -6,7 +6,7 @@ pipeline {
         IMAGE_TAG    = "${env.BUILD_NUMBER}"
         REGISTRY     = 'docker.io'
         FULL_IMAGE   = "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-        POLICY       = 'config/policy-production.yaml'
+        POLICY       = 'config/policy-presentation.yaml'
     }
 
     stages {
@@ -96,7 +96,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             when {
-                branch 'main'
+                branch 'master'
             }
             steps {
                 bat '''
@@ -108,7 +108,7 @@ pipeline {
 
         stage('SecureGate Baseline') {
             when {
-                branch 'main'
+                branch 'master'
             }
             steps {
                 bat '''
