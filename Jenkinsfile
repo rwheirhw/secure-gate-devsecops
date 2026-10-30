@@ -83,7 +83,11 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             when {
-                branch 'master'
+                expression {
+                    return env.BRANCH_NAME == 'master' ||
+                        env.GIT_BRANCH == 'master' ||
+                        env.GIT_BRANCH == 'origin/master'
+                }
             }
             steps {
                 bat '''
@@ -95,7 +99,11 @@ pipeline {
 
         stage('SecureGate Baseline') {
             when {
-                branch 'master'
+                expression {
+                    return env.BRANCH_NAME == 'master' ||
+                        env.GIT_BRANCH == 'master' ||
+                        env.GIT_BRANCH == 'origin/master'
+                }
             }
             steps {
                 bat '''
