@@ -45,7 +45,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: app
-          image: hecticjankylanky23498/securegate-demo:1.0.0
+          image: hecticjankylanky23498/securegate-demo:1.0.0@sha256:030d9557dd9c47d135f4ecd985c9a2704464de5687465d11cfccd48bd0456bd7
           imagePullPolicy: Always
           ports:
             - name: http
