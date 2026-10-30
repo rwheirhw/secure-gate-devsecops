@@ -240,17 +240,28 @@ maximum-count calculation.
 
 ### CI/CD and Jenkins
 
-Run the CLI from the repository or a clean build agent. A pipeline should
-archive `reports/*.json` and fail the deployment on exit code `1`:
+The checked-in pipeline supports a Windows Jenkins agent and uses `bat`
+steps. The agent must have Python, Docker, Trivy, kubectl (for deployment),
+and Git available to the Jenkins service account. A pipeline should archive
+`reports/*.json` and fail the deployment on exit code `1`:
 
 ```groovy
-sh '''
-  securegate assess reports/scan.json k8s/deployment.yaml \
-    --policy config/policy-production.yaml \
-    --json-output reports/securegate-assessment.json
+bat '''
+  python -m securegate assess ^
+    reports\scan.json k8s\production-demo.yaml ^
+    --policy config\policy-production.yaml ^
+    --json-output reports\securegate-assessment.json
 '''
-archiveArtifacts artifacts: 'reports/*.json', allowEmptyArchive: false
+archiveArtifacts artifacts: 'reports/**/*.json', allowEmptyArchive: true
 ```
+
+The pipeline uses the Docker Hub image namespace configured in
+`Jenkinsfile` and expects a Jenkins username/password credential with ID
+`dockerhub-registry`; store a registry access token as the password. It
+builds, scans, evaluates, inspects, performs a combined assessment, pushes
+only after the security stages pass, deploys the production demo on `main`,
+and creates a baseline on `main`. For a different registry, change the
+`REGISTRY`, `IMAGE_NAME`, and credential configuration.
 
 Do not make the pipeline depend on the dashboard. The dashboard is an
 operator view of reports and is not required for enforcement.

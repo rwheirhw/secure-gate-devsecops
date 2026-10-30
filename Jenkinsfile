@@ -2,10 +2,11 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME   = 'secure-app'
+        IMAGE_NAME   = 'hecticjankylanky23498/securegate-demo'
         IMAGE_TAG    = "${env.BUILD_NUMBER}"
-        REGISTRY     = 'registry.example.com'
+        REGISTRY     = 'docker.io'
         FULL_IMAGE   = "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+        POLICY       = 'config/policy-production.yaml'
     }
 
     stages {
@@ -18,69 +19,78 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${FULL_IMAGE} ./app"
+                bat 'docker build -t "%FULL_IMAGE%" app'
             }
         }
 
         stage('Trivy Scan') {
             steps {
-                sh """
-                    trivy image \
-                        --format json \
-                        --output reports/scan.json \
-                        ${FULL_IMAGE}
-                """
+                bat '''
+                    if not exist reports mkdir reports
+                    trivy image ^
+                        --format json ^
+                        --output reports\\scan.json ^
+                        "%FULL_IMAGE%"
+                '''
             }
         }
 
         stage('Install SecureGate') {
             steps {
-                sh 'python -m pip install -e .'
+                bat 'python -m pip install -e .'
             }
         }
 
         stage('SecureGate Evaluate') {
             steps {
-                sh """
-                    securegate evaluate \
-                        reports/scan.json \
-                        --policy config/policy.json \
-                        --json-output reports/securegate-report.json
-                """
+                bat '''
+                    python -m securegate evaluate ^
+                        reports\\scan.json ^
+                        --policy %POLICY% ^
+                        --json-output reports\\securegate-report.json
+                '''
             }
         }
 
         stage('SecureGate K8s Inspect') {
             steps {
-                sh """
-                    securegate inspect \
-                        k8s/ \
-                        --policy config/policy.json \
-                        --json-output reports/k8s-report.json
-                """
+                bat '''
+                    python -m securegate inspect ^
+                        k8s\\production-demo.yaml ^
+                        --policy %POLICY% ^
+                        --json-output reports\\k8s-report.json
+                '''
             }
         }
 
         stage('SecureGate Combined Assess') {
             steps {
-                sh """
-                    securegate assess \
-                        reports/scan.json \
-                        k8s/ \
-                        --policy config/policy.json \
-                        --json-output reports/assessment-report.json
-                """
+                bat '''
+                    python -m securegate assess ^
+                        reports\\scan.json ^
+                        k8s\\production-demo.yaml ^
+                        --policy %POLICY% ^
+                        --json-output reports\\assessment-report.json
+                '''
             }
         }
 
         stage('Push to Registry') {
-            when {
-                expression {
-                    return currentBuild.result == null || currentBuild.result == 'SUCCESS'
-                }
-            }
             steps {
-                sh "docker push ${FULL_IMAGE}"
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-registry',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
+                ]) {
+                    bat '''
+                        echo %DOCKER_TOKEN% | docker login %REGISTRY% ^
+                            --username %DOCKER_USER% ^
+                            --password-stdin
+                        docker push "%FULL_IMAGE%"
+                    '''
+                }
             }
         }
 
@@ -89,7 +99,10 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh "kubectl apply -f k8s/"
+                bat '''
+                    kubectl apply -f k8s\\production-demo.yaml
+                    kubectl -n securegate-demo rollout status deployment/securegate-demo
+                '''
             }
         }
 
@@ -98,12 +111,13 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh """
-                    securegate baseline \
-                        k8s/ \
-                        --policy config/policy.json \
-                        --output baselines/security-baseline.json
-                """
+                bat '''
+                    if not exist baselines mkdir baselines
+                    python -m securegate baseline ^
+                        k8s\\production-demo.yaml ^
+                        --policy %POLICY% ^
+                        --output baselines\\security-baseline.json
+                '''
             }
         }
     }
