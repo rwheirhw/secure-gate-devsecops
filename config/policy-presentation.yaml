@@ -1,0 +1,33 @@
+# Presentation-only policy.
+# This demonstrates a complete successful pipeline while retaining
+# Kubernetes security controls.
+
+severity_policy:
+  CRITICAL: WARN
+  HIGH: WARN
+  MEDIUM: WARN
+  LOW: ALLOW
+  UNKNOWN: WARN
+
+finding_policy:
+  K8S_PRIVILEGED_CONTAINER: BLOCK
+  K8S_RUN_AS_ROOT: BLOCK
+  K8S_RUN_AS_NON_ROOT_FALSE: BLOCK
+  K8S_PRIVILEGE_ESCALATION: BLOCK
+  K8S_HOST_NETWORK: BLOCK
+  K8S_HOST_PID: BLOCK
+  K8S_HOST_IPC: BLOCK
+  K8S_ADDED_CAPABILITIES: BLOCK
+  K8S_PLAINTEXT_SECRET_ENV: BLOCK
+  K8S_MISSING_RESOURCE_CONTROLS: WARN
+  K8S_EXTERNAL_SERVICE: WARN
+  K8S_INGRESS_EXPOSURE: WARN
+  K8S_IMAGE_DIGEST_MISSING: WARN
+  K8S_MUTABLE_IMAGE_TAG: WARN
+
+category_policy:
+  privilege: BLOCK
+  secret_exposure: BLOCK
+  network_exposure: WARN
+  resource_controls: WARN
+  deployment_config: WARN

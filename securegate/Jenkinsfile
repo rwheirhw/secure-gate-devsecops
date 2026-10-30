@@ -6,7 +6,7 @@ pipeline {
         IMAGE_TAG    = "${env.BUILD_NUMBER}"
         REGISTRY     = 'docker.io'
         FULL_IMAGE   = "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-        POLICY       = 'config/policy-staging.yaml'
+        POLICY       = 'config/policy-presentation.yaml'
     }
 
     stages {
