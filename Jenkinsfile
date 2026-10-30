@@ -77,20 +77,7 @@ pipeline {
 
         stage('Push to Registry') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-registry',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_TOKEN'
-                    )
-                ]) {
-                    bat '''
-                        echo %DOCKER_TOKEN% | docker login %REGISTRY% ^
-                            --username %DOCKER_USER% ^
-                            --password-stdin
-                        docker push "%FULL_IMAGE%"
-                    '''
-                }
+                bat 'docker push "%FULL_IMAGE%"'
             }
         }
 
